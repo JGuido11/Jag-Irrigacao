@@ -1,0 +1,24 @@
+
+# Essa configuracao é para definir os parametros de irrigação.
+
+[Configuracao_Irrigacao]
+
+#Insira chave da API abaixo, pode ser adquirida de graça em https://openweathermap.org/api
+api_key = 136a89583c55b2a9cb7f93320b9d9adt (exemplo de api key)
+
+#Latitude e longitude do local onde o sistema irá operar.
+lat = -23.634378
+lon = -46.693953
+
+#Período de tempo, em minutos, que a irrigação ficará ativada
+runtime_min = 0.3
+
+#Limite de quantidade de chuva, em milímetros, para que o sistema ative, caso tenha chovido menos que o especificado nas últimas 24hrs, a irrigação não ativará. 
+limite_mm = 0.05
+
+#GPIO pins que serão ativados, gpio_starter é o que controla a válvula e o gpio_led1 é apenas para ativar um led para que haja confirmação visual.
+gpio_starter = 27
+gpio_led1 = 22
+
+## Escolha o local de armazenamento do arquivo log.
+log = /var/log/jag-irrigacao/irrigacao.log

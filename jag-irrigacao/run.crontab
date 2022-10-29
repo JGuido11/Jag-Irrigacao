@@ -1,0 +1,5 @@
+# minuto   hora    dia do mes     mes    dia da semana      Comando
+# (0-59)  (0-23)    (1-31)       (1-12)     (0-6)                
+    0      6,18       *            *          *        /usr/bin/python2.7 /home/pi/jag-irrigacao/executar-irrigacao.py
+@reboot                                                /usr/bin/python2.7 /home/pi/jag-irrigacao/executar-irrigacao.py init > /var/log/jag-irrigacao/cron_reboot_erros.log 2>&1
+
