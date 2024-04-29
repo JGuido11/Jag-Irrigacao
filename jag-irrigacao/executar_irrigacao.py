@@ -17,30 +17,34 @@ def carregar_config(nome_arq='config'):
   esse_dir = os.path.abspath(os.path.dirname(__file__))
   config.read(esse_dir + '/' + nome_arq)
   if config.has_section('Configuracao_Irrigacao'):
-      return {nome:val for (nome, val) in config.items('Configuracao_Irrigacao')}
+    return {nome:val for (nome, val) in config.items('Configuracao_Irrigacao')}
   else:
-      print('Não foi possível ler o arquivo %s com a seção Configuracao_Irrigacao' % nome_arq)
-      print('Certifique-se que o arquivo chamado config está localizado no diretório' %s % esse_dir)
-      raise Exception('Não foi possível encontrar o arquivo config')
+    print('Não foi possível ler o arquivo %s com a seção Configuracao_Irrigacao' % nome_arq)
+    print('Certifique-se que o arquivo chamado config está localizado no diretório' %s % esse_dir)
+    raise Exception('Não foi possível encontrar o arquivo config')
 
 
 # Pede o histórico metereológico da API do Open Weather
 def get_clima_hist(config, timestamp_dt):
-    API_URL = 'https://api.openweathermap.org/data/2.5/onecall/timemachine?lat={lat}&lon={lon}&dt={day}&appid={key}'
-    hist_clima = requests.get(API_URL.format(key=config['api_key'],
-                                       day=timestamp_dt,
-                                       lat=config['lat'],
-                                       lon=config['lon']))
-    weather_data = json.loads(hist_clima.content.decode('utf-8'))
-    chuva_por_hora = {x.get('dt'): x.get('rain').get('1h') for x in weather_data.get('hourly') if x.get('rain') and x.get('dt') >= timestamp_dt}
-    return chuva_por_hora
+  API_URL = 'https://api.openweathermap.org/data/2.5/onecall/timemachine?lat={lat}&lon={lon}&dt={day}&appid={key}'
+  hist_clima = requests.get(API_URL.format(key=config['api_key'],
+    day=timestamp_dt,
+    lat=config['lat'],
+    lon=config['lon']
+   )
+  )
+  weather_data = json.loads(hist_clima.content.decode('utf-8'))
+  chuva_por_hora = {x.get('dt'): x.get('rain').get('1h') for x in weather_data.get('hourly') if x.get('rain') and x.get('dt') >= timestamp_dt}
+  return chuva_por_hora
 
 def get_clima(config, timestamp_dt):
     API_URL = 'https://api.openweathermap.org/data/2.5/onecall?lat={lat}&lon={lon}&dt={day}&appid={key}'
     clima_hoje = requests.get(API_URL.format(key=config['api_key'],
-                                       day=timestamp_dt,
-                                       lat=config['lat'],
-                                       lon=config['lon']))
+      day=timestamp_dt,
+      lat=config['lat'],
+      lon=config['lon']
+      )
+    )
     weather_data = json.loads(clima_hoje.content.decode('utf-8'))
     curr_rain = {}  
     curr = weather_data.get('current')
@@ -67,22 +71,22 @@ def get_ind_pluv_no_intervalo(config, time_win_hr=24):
     
     # Obtém valores de hoje e ontem
     try:
-        chuva_por_hora_ontem = get_clima_hist(config, ontem_timestamp)
+      chuva_por_hora_ontem = get_clima_hist(config, ontem_timestamp)
     except Exception as ex: 
-        print(ex)
-        return None
+      print(ex)
+      return None
     try:
-        chuva_por_hora_hoje = get_clima(config, hoje_timestamp)
+      chuva_por_hora_hoje = get_clima(config, hoje_timestamp)
     except Exception as ex:
-        print(ex)
-        return None
+      print(ex)
+      return None
    
     try: 
-        total = 0   
-        chuva_por_hora_ontem.update(chuva_por_hora_hoje)
-        total += sum(chuva_por_hora_ontem.values())
+      total = 0   
+      chuva_por_hora_ontem.update(chuva_por_hora_hoje)
+      total += sum(chuva_por_hora_ontem.values())
     except Exception as ex:
-        pass
+      pass
     return total
 
 # Inicia a irrigação
@@ -162,10 +166,4 @@ if __name__ == "__main__":
     # Seta pin e leds GPIOS como GPIO.LOW
     reset()
   else:
-    print("Comando desconhecido", sys.argv)
-        
-        
-    
-    
-    
-    
+    print("Comando desconhecido", sys.argv) 
