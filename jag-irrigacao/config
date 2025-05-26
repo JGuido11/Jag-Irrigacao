@@ -1,88 +1,100 @@
 import requests
 
-# Essa configuracão é para definir os parÂmetros de irrigação.
-[Configuracao_Irrigacao]
+# -*- coding: utf-8 -*-
+# Configuração do sistema de irrigação
+# Esse arquivo contém as configurações necessárias para o sistema de irrigação automatizado.
+# Certifique-se de que o arquivo está localizado no diretório correto e que as chaves de API estão corretas.
+# O arquivo de configuração deve ser nomeado como config.ini e deve estar no mesmo diretório que o script principal.
+# O arquivo de configuração deve conter as seguintes seções e parâmetros:
 
-#Insira chave da API abaixo, pode ser adquirida de graça em https://openweathermap.org/api
-api_key_googlemaps = AIzaSyClFIacR3nFxc0rphDSS4M5fLX_J2ggqJw
-api_key_openweather = 540970ad7f8bdc16db8d3022ae33b106
+class IrrigacaoConfig:
+    """Classe para armazenar as configurações do sistema de irrigação automatizado."""
+    def __init__(self):
+        # Chaves da API
+        # As chave da API abaixo, pode ser adquirida de graça em https://openweathermap.org/api
+        self.api_key_googlemaps = "AIzaSyClFIacR3nFxc0rphDSS4M5fLX_J2ggqJw"
+        self.api_key_openweather = "540970ad7f8bdc16db8d3022ae33b106"
 
+        self.latitude = -23.634378  # Latitude do local onde o sistema irá operar
+        self.longitude = -46.693953  # Longitude do local onde o sistema irá operar
+        self.runtime_min = 0.3  # Período de tempo, em minutos, que a irrigação ficará ativada
+        self.limite_mn = 0.05 # Limite de quantidade de chuva, em milímetros, para que o sistema ative
 
-#Latitude e longitude do local onde o sistema irá operar.
-def get_current_location(api_key_googlemaps):
-    # URL da API de Geolocalização do Google
-    url = f"https://www.googleapis.com/geolocation/v1/geolocate?key={api_key_googlemaps}"
-    
-    # Faça uma solicitação POST para a API de Geolocalização do Google
-    response = requests.post(url)
-    
-    # Verifique se a resposta foi bem-sucedida
-    if response.status_code == 200:
-        data = response.json()
+        # GPIO pins que serão ativados
+        self.gpio_starter = 27
+        self.gpio_led1 = 22
+
+        log = "/var/log/jag-irrigacao/irrigacao.log"  # Escolha o local de armazenamento do arquivo log
+
+    def ger_current_location(self):
+        """Obtém a localização atual usando a API do Google Maps."""
+
+        url = f"https://www.googleapis.com/geolocation/v1/geolocate?key={self.api_key_googlemaps}"
+        try:
+            response = requests.post(url)
+            response.raise_for_status()  # Levanta um erro se a resposta não for bem-sucedida
+            data = response.json()
+            lat = data['location']['lat']
+            lon = data['location']['lng']
+            return lat, lon
+        except Exception as e:
+            print(f"Erro ao obter localização atual: {e}")
+            return None, None
         
-        # Obtenha latitude e longitude da resposta
-        lat = data['location']['lat']
-        lon = data['location']['lng']
-        
-        return lat, lon
-    else:
-        print(f"Erro na solicitação: {response.status_code}")
-        return None, None
-
-# Obtenha a localização atual
-latitude, longitude = get_current_location(api_key_googlemaps)
-
-print(f"Latitude: {latitude}, Longitude: {longitude}")
-
-
-# Período de tempo, em minutos, que a irrigação ficará ativada
-runtime_min = 0.3
-
-# Limite de quantidade de chuva, em milímetros, para que o sistema ative, caso tenha chovido menos que o especificado nas últimas 24hrs, a irrigação não ativará. 
-def get_precipitation(api_key_openweather, lat, lon):
-    # URL da API de Previsão do Tempo do OpenWeather para obter dados do clima atual
-    url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key_openweather}"
-    
-    # Faça uma solicitação para a API de Previsão do Tempo
-    response = requests.get(url)
-    
-    # Verifique se a resposta foi bem-sucedida
-    if response.status_code == 200:
-        data = response.json()
-        
-        # Verifique se há dados de chuva nas últimas 24 horas
-        if 'rain' in data:
-            # Obtenha a quantidade de chuva em milímetros nas últimas 24 horas
-            rain_24h = data['rain'].get('1h', 0)  # Chuva em 1 hora (em milímetros)
-            
-            # Pode haver uma chave '3h' ou '24h' dependendo dos dados disponíveis
-            rain_24h += data['rain'].get('3h', 0)  # Chuva em 3 horas (em milímetros)
-            
+    def get_precepitacao(self, lat=None, lon=None):
+        """Obtem a quantidade de precipitação das ultimas horas usando a API do OpenWeather."""
+        lat = lat if lat else self.latitude
+        lon = lon if lon else self.longitude
+        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={self.api_key_openweather}"
+        try:
+            response = requests.get(url)
+            response.raise_for_status()  # Levanta um erro se a resposta não for bem-sucedida
+            data = response.json()
+            rain_24h = 0
+            for 'rain' in data:
+                # Verifique se há dados de chuva nas últimas 24 horas
+                if 'rain' in data:
+                    # Obtenha a quantidade de chuva em milímetros nas últimas 24 horas
+                    rain_24h += data['rain'].get('1h', 0)  # Chuva em 1 hora (em milímetros)
+                    # Pode haver uma chave '3h' ou '24h' dependendo dos dados disponíveis
+                    rain_24h += data['rain'].get('3h', 0)  # Chuva em 3 horas (em milímetros)
+                else:
+                    print("Nenhum dado de chuva disponível nas últimas 24 horas")
+                    rain_24h = 0
             return rain_24h
-        else:
-            print("Nenhum dado de chuva disponível nas últimas 24 horas")
-            return 0
+        except Exception as e:
+            print(f"Erro ao obter precipitação: {e}")
+            return None
+    
+    def should_irrigate(self):
+        """Verifica se a irrigação deve ser ativada com base na quantidade de chuva."""
+        qtde_chuva = self.get_precepitacao()
+        try:
+            if qtde_chuva is None:
+                print("Erro ao obter dados de precipitação")
+                return False
+            elif qtde_chuva is not None:
+                if qtde_chuva < self.limite_mn:
+                    print("Irrigação deve ser ativada")
+                    return True
+                else:
+                    print("Não é necessário ativar a irrigação")
+                    return False
+        except Exception as e:
+            raise ValueError("Quantidade de chuva não disponível")
+        
+if __name__ == "__main__":
+    config = IrrigacaoConfig()
+    latitude, longitude = config.ger_current_location()
+    print(f"Latitude: {latitude}, Longitude: {longitude}")
+    
+    quantidade_chuva = config.get_precepitacao(latitude, longitude)
+    print(f"Quantidade de chuva: {quantidade_chuva} mm")
+    
+    if config.should_irrigate():
+        print("Irrigação ativada")
     else:
-        print(f"Erro na solicitação: {response.status_code}")
-        return None
+        print("Irrigação não ativada")
 
-# Insira sua chave de API e as coordenadas de latitude e longitude do local
-latitude = -23.634378
-longitude = -46.693953
-
-# Obtenha a quantidade de chuva nas últimas 24 horas
-quantidade_chuva = get_precipitation(api_key_openweather, latitude, longitude)
-
-# Compare com o limite especificado
-limite_mm = 0.05
-if quantidade_chuva < limite_mm:
-    print("Irrigação deve ser ativada")
-else:
-    print("Não é necessário ativar a irrigação")
-
-# GPIO pins que serão ativados, gpio_starter é o que controla a válvula e o gpio_led1 é apenas para ativar um led para que haja confirmação visual.
-gpio_starter = 27
-gpio_led1 = 22
-
-# Escolha o local de armazenamento do arquivo log.
-log = /var/log/jag-irrigacao/irrigacao.log
+#     # Ativa o GPIO para iniciar a irrigação
+#     GPIO.output(config.gpio_starter, GPIO.HIGH)
